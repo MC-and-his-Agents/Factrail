@@ -1,0 +1,45 @@
+name: Bug
+description: 记录缺陷或数据异常
+title: "[Work Item] Bug: "
+labels:
+  - level:work-item
+  - type:bug
+body:
+  - type: textarea
+    id: actual
+    attributes:
+      label: 实际行为
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 预期行为
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: 复现步骤
+  - type: textarea
+    id: input_shape
+    attributes:
+      label: 输入数据形态
+      description: 说明 raw event、JSONL、schema version 或 fixture。
+  - type: input
+    id: provider
+    attributes:
+      label: Provider
+      placeholder: Codex / Claude / OpenCode / OpenClaw / Generic
+  - type: input
+    id: schema_version
+    attributes:
+      label: Schema version
+  - type: textarea
+    id: impact
+    attributes:
+      label: 影响范围
+  - type: textarea
+    id: suggested_fix
+    attributes:
+      label: 建议修复

@@ -1,0 +1,52 @@
+name: Phase
+description: 创建阶段性产品目标或版本边界
+title: "[Phase] "
+labels:
+  - level:phase
+body:
+  - type: textarea
+    id: goal
+    attributes:
+      label: Phase 目标
+      description: 这个 Phase 要让产品达到什么状态。
+      placeholder: 说明阶段目标、用户价值和主要交付结果。
+    validations:
+      required: true
+  - type: textarea
+    id: boundary
+    attributes:
+      label: 版本边界
+      description: 说明版本范围、完成后应具备的能力，以及不承诺的能力。
+    validations:
+      required: true
+  - type: textarea
+    id: in_scope
+    attributes:
+      label: In scope
+      description: 本 Phase 明确包含的工作。
+    validations:
+      required: true
+  - type: textarea
+    id: out_of_scope
+    attributes:
+      label: Out of scope
+      description: 本 Phase 明确不包含的工作。
+    validations:
+      required: true
+  - type: textarea
+    id: exit_criteria
+    attributes:
+      label: Exit criteria
+      description: 可验证的退出标准。
+    validations:
+      required: true
+  - type: textarea
+    id: related_frs
+    attributes:
+      label: 关联 FR
+      description: 关联的 FR issue 链接或标题。
+  - type: textarea
+    id: risks
+    attributes:
+      label: 风险
+      description: 技术、产品、隐私、性能、许可或交付风险。

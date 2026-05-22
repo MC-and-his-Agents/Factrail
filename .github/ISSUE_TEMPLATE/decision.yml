@@ -1,0 +1,48 @@
+name: Decision
+description: 记录架构或产品决策
+title: "[Work Item] Decision: "
+labels:
+  - level:work-item
+  - type:decision
+body:
+  - type: textarea
+    id: decision
+    attributes:
+      label: Decision
+    validations:
+      required: true
+  - type: dropdown
+    id: status
+    attributes:
+      label: "Status: Proposed / Accepted / Rejected / Superseded"
+      options:
+        - Proposed
+        - Accepted
+        - Rejected
+        - Superseded
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+    validations:
+      required: true
+  - type: textarea
+    id: options
+    attributes:
+      label: Options considered
+  - type: textarea
+    id: chosen
+    attributes:
+      label: Chosen option
+    validations:
+      required: true
+  - type: textarea
+    id: consequences
+    attributes:
+      label: Consequences
+  - type: textarea
+    id: followup
+    attributes:
+      label: Follow-up work

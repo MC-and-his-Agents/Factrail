@@ -1,0 +1,166 @@
+name: Project triage
+
+on:
+  issues:
+    types: [opened, labeled]
+  pull_request:
+    types: [opened, ready_for_review, reopened, labeled]
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: read
+  repository-projects: write
+
+jobs:
+  add-to-project:
+    name: Add issue or PR to Factrail project
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check Project token
+        id: project-token
+        env:
+          PROJECTS_TOKEN: ${{ secrets.PROJECTS_TOKEN }}
+        run: |
+          if [ -z "$PROJECTS_TOKEN" ]; then
+            echo "has_token=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::PROJECTS_TOKEN is required because GITHUB_TOKEN cannot access GitHub Projects. Create a GitHub App token or PAT with project scope."
+          else
+            echo "has_token=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Add to Project and set basic fields
+        if: steps.project-token.outputs.has_token == 'true'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.PROJECTS_TOKEN }}
+          script: |
+            const projectOwner = 'MC-and-his-Agents';
+            const projectTitle = 'Factrail Product & Engineering';
+            const content = context.payload.issue || context.payload.pull_request;
+
+            if (!content?.node_id) {
+              core.info('No issue or pull request node id found.');
+              return;
+            }
+
+            async function findProject(owner, title) {
+              const orgQuery = `
+                query($owner: String!) {
+                  organization(login: $owner) {
+                    projectsV2(first: 100) {
+                      nodes { id number title url }
+                    }
+                  }
+                }`;
+              const userQuery = `
+                query($owner: String!) {
+                  user(login: $owner) {
+                    projectsV2(first: 100) {
+                      nodes { id number title url }
+                    }
+                  }
+                }`;
+
+              for (const query of [orgQuery, userQuery]) {
+                try {
+                  const result = await github.graphql(query, { owner });
+                  const projects = result.organization?.projectsV2?.nodes || result.user?.projectsV2?.nodes || [];
+                  const project = projects.find((p) => p.title === title);
+                  if (project) return project;
+                } catch (error) {
+                  core.info(`Project lookup branch skipped: ${error.message}`);
+                }
+              }
+              return null;
+            }
+
+            async function getFields(projectId) {
+              const query = `
+                query($projectId: ID!) {
+                  node(id: $projectId) {
+                    ... on ProjectV2 {
+                      fields(first: 100) {
+                        nodes {
+                          ... on ProjectV2FieldCommon { id name dataType }
+                          ... on ProjectV2SingleSelectField {
+                            id name dataType
+                            options { id name }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }`;
+              const result = await github.graphql(query, { projectId });
+              return result.node.fields.nodes.filter(Boolean);
+            }
+
+            async function setSingleSelect(projectId, itemId, fields, fieldName, optionName) {
+              const field = fields.find((candidate) => candidate.name === fieldName);
+              const option = field?.options?.find((candidate) => candidate.name === optionName);
+              if (!field || !option) {
+                core.info(`Field option not found: ${fieldName}=${optionName}`);
+                return;
+              }
+
+              await github.graphql(`
+                mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!, $optionId: String!) {
+                  updateProjectV2ItemFieldValue(input: {
+                    projectId: $projectId,
+                    itemId: $itemId,
+                    fieldId: $fieldId,
+                    value: { singleSelectOptionId: $optionId }
+                  }) {
+                    projectV2Item { id }
+                  }
+                }`, { projectId, itemId, fieldId: field.id, optionId: option.id });
+            }
+
+            const project = await findProject(projectOwner, projectTitle);
+            if (!project) {
+              core.warning(`Project not found: ${projectOwner}/${projectTitle}. Set it up first, then rerun this workflow.`);
+              return;
+            }
+
+            let itemId;
+            try {
+              const added = await github.graphql(`
+                mutation($projectId: ID!, $contentId: ID!) {
+                  addProjectV2ItemById(input: { projectId: $projectId, contentId: $contentId }) {
+                    item { id }
+                  }
+                }`, { projectId: project.id, contentId: content.node_id });
+              itemId = added.addProjectV2ItemById.item.id;
+            } catch (error) {
+              core.warning(`Could not add item to project, possibly already present or token lacks project scope: ${error.message}`);
+              return;
+            }
+
+            const labels = new Set((content.labels || []).map((label) => label.name));
+            const fields = await getFields(project.id);
+
+            const mappings = [
+              ['level:phase', 'Level', 'Phase'],
+              ['level:fr', 'Level', 'FR'],
+              ['level:work-item', 'Level', 'Work Item'],
+              ['priority:p0', 'Priority', 'P0'],
+              ['priority:p1', 'Priority', 'P1'],
+              ['priority:p2', 'Priority', 'P2'],
+              ['priority:p3', 'Priority', 'P3'],
+              ['type:research', 'Work Type', 'Research'],
+              ['type:decision', 'Work Type', 'Decision'],
+              ['type:docs', 'Work Type', 'Docs'],
+              ['type:test', 'Work Type', 'Test'],
+              ['type:chore', 'Work Type', 'Maintenance'],
+              ['type:feature', 'Work Type', 'Engineering'],
+              ['type:task', 'Work Type', 'Engineering']
+            ];
+
+            for (const [label, fieldName, optionName] of mappings) {
+              if (labels.has(label)) {
+                await setSingleSelect(project.id, itemId, fields, fieldName, optionName);
+              }
+            }
+
+            core.info(`Added ${content.html_url} to ${project.url}`);

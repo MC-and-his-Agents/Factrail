@@ -1,0 +1,53 @@
+name: Work Item
+description: 创建具体可执行工作项
+title: "[Work Item] "
+labels:
+  - level:work-item
+  - type:task
+body:
+  - type: input
+    id: fr
+    attributes:
+      label: 所属 FR
+      placeholder: "[FR] Codex JSONL Scanner / Codex 本地日志扫描"
+    validations:
+      required: true
+  - type: dropdown
+    id: work_type
+    attributes:
+      label: 工作类型
+      options:
+        - Product
+        - Engineering
+        - Research
+        - Decision
+        - Design
+        - Maintenance
+        - Docs
+        - Test
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: 任务描述
+    validations:
+      required: true
+  - type: textarea
+    id: implementation
+    attributes:
+      label: 实现建议
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+    validations:
+      required: true
+  - type: textarea
+    id: tests
+    attributes:
+      label: 测试要求
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: 依赖
